@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ler Código</title>
+  <style>
+    /* Estilos CSS */
+    body, html {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      justify-content: center; /* Centralização horizontal */
+      align-items: center; /* Centralização vertical */
+      flex-direction: column; /* Coloca os elementos um abaixo do outro */
+    }
+
+    #video, #codeData {
+      width: 100%;
+      max-width: 400px;
+      height: auto;
+      display: none; /* Inicialmente oculto */
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 20px; /* Adicionamos um espaço abaixo do botão */
+      width: 200px; /* Largura fixa para os botões */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center; /* Centraliza o texto */
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #codeData {
+      font-size: 24px; /* Aumenta o tamanho da fonte das informações */
+    }
+  </style>
+</head>
+<body>
+  <video id="video" playsinline autoplay></video>
+  <br>
+  <input type="text" id="codigoBarrasInput" placeholder="Digite o código de barras">
+  <br>
+  <button id="buscarCodigoBarras">Buscar Código de Barras</button>
+  <br>
+  <button id="buscarQR">Camera</button>
+  
+
+  
+
+  <div id="codeData"></div>
+
+  <!-- Scripts JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/quagga/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const codeDataElement = document.getElementById('codeData');
+    const buscarQRButton = document.getElementById('buscarQR');
+    const buscarCodigoBarrasButton = document.getElementById('buscarCodigoBarras');
+    const codigoBarrasInput = document.getElementById('codigoBarrasInput');
+    let quaggaInitialized = false;
+    let readingActive = false; // Variável para controlar o estado da leitura
+
+    // Função para iniciar a câmera e ler o QR code automaticamente
+    async function initQRScanner() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        video.play(); // Inicia a reprodução do vídeo automaticamente
+
+        video.addEventListener('loadedmetadata', () => {
+          decodeQRCode(); // Decodifica o QR code assim que a câmera estiver pronta
+        });
+      } catch (error) {
+        console.error('Erro ao acessar a câmera:', error);
+      }
+    }
+
+    // Função para decodificar o QR code
+    function decodeQRCode() {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+      if (code) {
+        codeDataElement.innerText = code.data;
+        codeDataElement.style.display = 'block';
+        video.style.display = 'none'; // Oculta o vídeo quando o QR code é decodificado com sucesso
+        readingActive = false; // Desativa a leitura
+      } else {
+        if (readingActive) {
+          requestAnimationFrame(decodeQRCode); // Continua tentando decodificar o QR code enquanto a leitura estiver ativa
+        }
+      }
+    }
+
+    // Iniciar a câmera quando a página carregar
+    window.onload = () => {
+      initQRScanner(); // Inicia com a leitura de QR codes
+    };
+
+    // Adicionar evento de clique ao botão "Buscar QR Code"
+    buscarQRButton.addEventListener('click', () => {
+      codeDataElement.style.display = 'none'; // Oculta as informações quando o botão "Buscar QR Code" é clicado
+      video.style.display = 'block'; // Exibe o vídeo novamente
+      initQRScanner(); // Reinicia a leitura de QR codes
+      readingActive = true; // Ativa a leitura
+    });
+
+    // Adicionar evento de clique ao botão "Buscar Código de Barras"
+    buscarCodigoBarrasButton.addEventListener('click', () => {
+      const codigoBarras = codigoBarrasInput.value;
+      if (codigoBarras) {
+        codeDataElement.innerText = codigoBarras;
+        codeDataElement.style.display = 'block';
+      } else {
+        alert('Por favor, digite um código de barras válido.');
+      }
+    });
+  </script>
+</body>
+</html>
